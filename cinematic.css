@@ -1,0 +1,272 @@
+/* Cinematicas de ataque y layout de controles */
+#py1 .battle-actions,
+#py2 .battle-actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: .5rem !important;
+}
+
+#py1 .battle-actions .btn,
+#py2 .battle-actions .btn {
+  min-width: 0;
+  min-height: 54px;
+  padding: .45rem .35rem;
+  font-size: .82rem;
+  line-height: 1.05;
+  white-space: normal;
+  border-width: 1px;
+  transition: transform .16s ease, box-shadow .16s ease, filter .16s ease;
+}
+
+#py1 .battle-actions .btn:not(:disabled):hover,
+#py2 .battle-actions .btn:not(:disabled):hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 18px rgba(255,255,255,.16);
+  filter: brightness(1.12);
+}
+
+.attack-label {
+  display: block;
+  margin-top: .15rem;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .01em;
+}
+
+#attack-cinematic {
+  position: fixed;
+  inset: 0;
+  z-index: 9998;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+}
+
+#attack-cinematic.is-active {
+  opacity: 1;
+  visibility: visible;
+}
+
+.attack-cinematic__veil {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 50% 45%, rgba(255,255,255,.18), rgba(12,12,28,.16) 38%, rgba(0,0,0,.34) 72%, transparent 100%);
+  backdrop-filter: blur(1.5px);
+  -webkit-backdrop-filter: blur(1.5px);
+  opacity: 0;
+}
+
+#attack-cinematic.is-active .attack-cinematic__veil {
+  animation: dbzVeil 1.45s ease both;
+}
+
+.attack-cinematic__flash {
+  position: absolute;
+  inset: -15%;
+  background:
+    radial-gradient(circle at center, rgba(255,255,255,.98) 0 4%, rgba(255,255,255,.58) 9%, rgba(255,237,138,.20) 23%, transparent 52%);
+  mix-blend-mode: screen;
+  transform: scale(.35);
+  opacity: 0;
+}
+
+#attack-cinematic.is-active .attack-cinematic__flash {
+  animation: dbzFlash .72s ease-out both;
+}
+
+#attack-cinematic.is-special .attack-cinematic__flash {
+  background:
+    radial-gradient(circle at center, rgba(255,255,255,1) 0 5%, rgba(255,238,135,.78) 12%, rgba(255,161,22,.30) 27%, transparent 58%);
+}
+
+.attack-cinematic__energy {
+  position: absolute;
+  width: min(72vw, 760px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  background:
+    repeating-conic-gradient(from 0deg, rgba(255,255,255,.10) 0 5deg, transparent 5deg 14deg);
+  mask-image: radial-gradient(circle, black 0 36%, transparent 72%);
+  -webkit-mask-image: radial-gradient(circle, black 0 36%, transparent 72%);
+  opacity: 0;
+}
+
+#attack-cinematic.is-active .attack-cinematic__energy {
+  animation: dbzEnergy 1.35s ease-out both;
+}
+
+.attack-cinematic__stage {
+  position: relative;
+  width: min(94vw, 930px);
+  min-height: min(72vh, 600px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  isolation: isolate;
+}
+
+.attack-cinematic__character {
+  position: relative;
+  z-index: 2;
+  max-width: min(70vw, 540px);
+  max-height: min(68vh, 560px);
+  object-fit: contain;
+  opacity: 0;
+  transform: scale(.72);
+  filter:
+    drop-shadow(0 0 12px rgba(255,255,255,.34))
+    drop-shadow(0 0 34px rgba(255,193,7,.18));
+  user-select: none;
+}
+
+#attack-cinematic.is-active .attack-cinematic__character {
+  animation: dbzCharacter 1.35s cubic-bezier(.16,.8,.18,1) both;
+}
+
+#attack-cinematic.player-1.is-active .attack-cinematic__character {
+  --attack-shift: -95px;
+}
+
+#attack-cinematic.player-2.is-active .attack-cinematic__character {
+  --attack-shift: 95px;
+}
+
+#attack-cinematic.is-special .attack-cinematic__character {
+  filter:
+    drop-shadow(0 0 13px rgba(255,255,255,.62))
+    drop-shadow(0 0 42px rgba(255,193,7,.42));
+}
+
+.attack-cinematic__copy {
+  position: absolute;
+  z-index: 4;
+  left: 50%;
+  bottom: 4%;
+  width: min(92vw, 760px);
+  transform: translateX(-50%);
+  text-align: center;
+  text-shadow: 0 3px 10px rgba(0,0,0,.92), 0 0 18px rgba(0,0,0,.82);
+  opacity: 0;
+}
+
+#attack-cinematic.is-active .attack-cinematic__copy {
+  animation: dbzCopy 1.3s .08s ease both;
+}
+
+.attack-cinematic__fighter {
+  margin: 0 0 .2rem;
+  color: #fff;
+  font-size: clamp(.9rem, 2vw, 1.15rem);
+  font-weight: 800;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+}
+
+.attack-cinematic__attack {
+  margin: 0;
+  color: #ffc107;
+  font-size: clamp(1.65rem, 5vw, 3.7rem);
+  font-weight: 1000;
+  font-style: italic;
+  line-height: .95;
+  letter-spacing: -.03em;
+  text-transform: uppercase;
+}
+
+#attack-cinematic.is-basic .attack-cinematic__attack {
+  color: #ff6868;
+}
+
+.attack-cinematic__phrase {
+  margin: .5rem auto 0;
+  max-width: 680px;
+  color: rgba(255,255,255,.92);
+  font-size: clamp(.88rem, 2vw, 1.08rem);
+  font-weight: 650;
+}
+
+@keyframes dbzFlash {
+  0% { opacity: 0; transform: scale(.2); }
+  12% { opacity: 1; transform: scale(.78); }
+  28% { opacity: .86; transform: scale(1.3); }
+  55% { opacity: .18; transform: scale(1.75); }
+  100% { opacity: 0; transform: scale(2.05); }
+}
+
+@keyframes dbzVeil {
+  0%, 100% { opacity: 0; }
+  12%, 72% { opacity: 1; }
+}
+
+@keyframes dbzEnergy {
+  0% { opacity: 0; transform: scale(.45) rotate(0deg); }
+  22% { opacity: .65; }
+  100% { opacity: 0; transform: scale(1.28) rotate(115deg); }
+}
+
+@keyframes dbzCharacter {
+  0% {
+    opacity: 0;
+    transform: translateX(var(--attack-shift, 0)) scale(.7);
+  }
+  18% {
+    opacity: 1;
+    transform: translateX(0) scale(1.06);
+  }
+  58% {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  84% {
+    opacity: 1;
+    transform: translateX(0) scale(1.03);
+  }
+  100% {
+    opacity: 0;
+    transform: translateX(calc(var(--attack-shift, 0) * -.25)) scale(1.12);
+  }
+}
+
+@keyframes dbzCopy {
+  0% { opacity: 0; transform: translate(-50%, 20px) scale(.92); filter: blur(4px); }
+  18%, 75% { opacity: 1; transform: translate(-50%, 0) scale(1); filter: blur(0); }
+  100% { opacity: 0; transform: translate(-50%, -8px) scale(1.04); }
+}
+
+@media (max-width: 768px) {
+  #py1 .battle-actions,
+  #py2 .battle-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+  }
+
+  #py1 .battle-actions .btn,
+  #py2 .battle-actions .btn {
+    font-size: .86rem;
+  }
+
+  .attack-cinematic__stage {
+    min-height: 64vh;
+  }
+
+  .attack-cinematic__character {
+    max-width: 86vw;
+    max-height: 55vh;
+  }
+
+  .attack-cinematic__copy {
+    bottom: 8%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  #attack-cinematic.is-active .attack-cinematic__veil,
+  #attack-cinematic.is-active .attack-cinematic__flash,
+  #attack-cinematic.is-active .attack-cinematic__energy,
+  #attack-cinematic.is-active .attack-cinematic__character,
+  #attack-cinematic.is-active .attack-cinematic__copy {
+    animation-duration: .35s !important;
+  }
+}
