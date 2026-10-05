@@ -1,0 +1,62 @@
+body {
+  background-color: #000000 !important;
+  color: #ffffff;
+  min-height: 100vh;
+}
+
+/* Inputs con fondo oscuro */
+.form-floating > .form-control {
+  background-color: #1a1a24 !important;
+  color: #ffffff !important;
+}
+
+.form-floating > .form-control:focus {
+  background-color: #222232 !important;
+  color: #ffffff !important;
+}
+
+/* Cursor e interacción en las imágenes de selección de personajes */
+#py1 .row img, #py2 .row img {
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+#py1 .row img:hover, #py2 .row img:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 14px rgba(255, 193, 7, 0.85);
+}
+
+/* Vista previa del personaje completo */
+.character-full-preview {
+  max-height: 250px;
+  height: auto;
+  object-fit: contain;
+  filter: drop-shadow(0 0 16px rgba(255, 255, 255, 0.25));
+  animation: previewFadeIn 0.3s ease-in-out;
+}
+
+@keyframes previewFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.battle-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+.battle-actions .btn {
+  min-height: 48px;
+  font-weight: 600;
+}
+.battle-actions .btn:focus-visible {
+  outline: 3px solid white;
+  outline-offset: 3px;
+}
+.battle-status { min-height: 2.5em; }
