@@ -63,7 +63,9 @@ webpack.config.cjs           Configuración de compilación
 babel.config.json           Transpilación ECMAScript con preset-env
 ```
 
-Bootstrap proporciona la estructura visual, Font Awesome los iconos y SweetAlert2 los avisos. Babel transpila JavaScript mediante babel-loader y Webpack genera la versión de producción en `dist/`.
+Bootstrap proporciona la estructura visual, Font Awesome los iconos y SweetAlert2 los avisos. Los bundles incluyen una huella de contenido para evitar versiones antiguas en caché.
+
+Babel transpila JavaScript mediante babel-loader y Webpack genera la versión de producción en `dist/`.
 
 ## Publicación
 
