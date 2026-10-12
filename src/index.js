@@ -3,6 +3,8 @@ import '@fortawesome/fontawesome-free/css/fontawesome.min.css';
 import '@fortawesome/fontawesome-free/css/solid.min.css';
 import Swal from 'sweetalert2';
 import Combate from './Combate.js';
+import { nombreValido } from './validacion.js';
+import { dialogoDe } from './dialogos.js';
 import './style.css';
 
 const $ = (id) => document.getElementById(id);
@@ -115,17 +117,21 @@ function activarAnimacionPoder(indice, accion = 'basico') {
   arena.classList.add('powering');
   luchador.classList.add('powering');
   overlay.classList.add('show');
+  overlay.setAttribute('aria-hidden', 'false');
+  const jugador = combate.jugadores[indice];
+  $('attack-dialogue').textContent = `${personaje}: ${dialogoDe(personaje)} ${accion === 'especial' ? jugador.getAtaqueEspecial().nombre : jugador.getAtaqueBasico().nombre} ¡Ahora!`;
   setTimeout(() => {
     arena.classList.remove('powering');
     luchador.classList.remove('powering');
     overlay.classList.remove('show');
-  }, 650);
+    overlay.setAttribute('aria-hidden', 'true');
+  }, 900);
 }
 
 seleccion.forEach((seleccionJugador, i) => {
   const n = i + 1;
   $(`py${n}`)
-    .querySelectorAll('.row img')
+    .querySelectorAll('.row img:not(.character-full-preview)')
     .forEach((img) => {
       img.tabIndex = 0;
       img.setAttribute('role', 'button');
@@ -135,7 +141,7 @@ seleccion.forEach((seleccionJugador, i) => {
         if (listos[i]) return;
         seleccionJugador.personaje = img.alt;
         $(`py${n}`)
-          .querySelectorAll('.row img')
+          .querySelectorAll('.row img:not(.character-full-preview)')
           .forEach((item) => {
             item.classList.toggle('bg-warning', item === img);
             item.setAttribute('aria-pressed', String(item === img));
@@ -154,8 +160,9 @@ seleccion.forEach((seleccionJugador, i) => {
       });
     });
   $(`btn_player${n}`).addEventListener('click', () => {
-    const nombre = $(`player${n}`).value.trim();
-    if (!nombre) return aviso(`Escribe el nombre del jugador ${n}.`);
+    const nombre = $(`player${n}`).value;
+    if (!nombreValido(nombre))
+      return aviso(`Jugador ${n}: escribe de 1 a 24 letras o números, sin espacios ni símbolos.`);
     if (!seleccionJugador.personaje)
       return aviso(`Elige el personaje del jugador ${n}.`);
     seleccionJugador.nombre = nombre;
@@ -164,7 +171,7 @@ seleccion.forEach((seleccionJugador, i) => {
     $(`btn_player${n}`).disabled = true;
     $(`btn_player${n}`).textContent = '¡Listo!';
     $(`py${n}`)
-      .querySelectorAll('.row img')
+      .querySelectorAll('.row img:not(.character-full-preview)')
       .forEach((img) => {
         img.tabIndex = -1;
         img.setAttribute('aria-disabled', 'true');
@@ -174,7 +181,20 @@ seleccion.forEach((seleccionJugador, i) => {
   });
 });
 
-function iniciar() {
+async function iniciar() {
+  if (bloqueado) return;
+  bloqueado = true;
+  $('seleccion').classList.add('d-none');
+  await Swal.fire({
+    title: 'Preparando el combate',
+    text: 'Concentrando ki… El jugador 1 comienza.',
+    timer: 1500,
+    timerProgressBar: true,
+    showConfirmButton: false,
+    allowOutsideClick: false,
+    allowEscapeKey: false,
+    didOpen: () => Swal.showLoading(),
+  });
   clearTimeout(temporizador);
   detenerMusicaDeBatalla();
   combate = new Combate(seleccion);
@@ -184,7 +204,6 @@ function iniciar() {
   $('estado').textContent = 'Elige una acción cuando sea tu turno.';
   $('resultado').textContent = '';
   $('registro').replaceChildren();
-  $('revancha').classList.add('d-none');
   $('luchadores').innerHTML = seleccion
     .map((jugador, i) => {
       const basico = combate.jugadores[i].getAtaqueBasico().nombre;
@@ -193,6 +212,7 @@ function iniciar() {
         <div class="col-md-6"><article id="fighter-${i}" class="fighter p-3 p-lg-4">
             <h3 id="nombre-${i}" class="h4"></h3><p id="personaje-${i}" class="text-secondary"></p>
             <img id="sprite-${i}" class="battle-sprite" alt="">
+            <p id="dialogo-${i}" class="character-dialogue" aria-live="polite"></p>
             ${['vida', 'ki', 'energia'].map((stat) => `<div class="stat-label">${{ vida: 'Vida', ki: 'Ki', energia: 'Energía' }[stat]}</div><div class="progress mb-2"><div id="battle-${i}-${stat}" class="progress-bar bg-${{ vida: 'success', ki: 'info', energia: 'warning' }[stat]} text-dark fw-bold" role="progressbar" aria-label="${stat}" aria-valuemin="0" aria-valuemax="100"></div></div>`).join('')}
             <p id="semillas-${i}" class="mt-3"></p><p id="escudo-${i}" class="shield-status"></p>
             <div class="actions">
@@ -210,6 +230,7 @@ function iniciar() {
     $(`personaje-${i}`).textContent = jugador.personaje;
     $(`sprite-${i}`).src = imagen(jugador.personaje);
     $(`sprite-${i}`).alt = jugador.personaje;
+    $(`dialogo-${i}`).textContent = dialogoDe(jugador.personaje);
   });
   actualizar();
   $('turno').focus();
@@ -246,7 +267,7 @@ function actualizar() {
         (accion === 'basico' && !jugador.puedeAtacar(5, 10)) ||
         (accion === 'especial' &&
           (combate.turnosTotales < 2 || !jugador.puedeAtacar(15, 20))) ||
-        (accion === 'curar' && jugador.getSemilla() === 0);
+        (accion === 'curar' && !jugador.puedeCurarse());
       btn.disabled = bloqueado || terminado || combate.turno !== i || falta;
     });
   });
@@ -254,7 +275,7 @@ function actualizar() {
   else if (combate.turnosTotales >= 2) iniciarMusicaDeBatalla();
 }
 
-$('luchadores').addEventListener('click', (event) => {
+$('luchadores').addEventListener('click', async (event) => {
   const btn = event.target.closest('button[data-action]');
   if (!btn || bloqueado || btn.disabled) return;
   const i = Number(btn.dataset.player);
@@ -273,21 +294,32 @@ $('luchadores').addEventListener('click', (event) => {
   if (respuesta.ganador !== null) {
     $('resultado').textContent =
       `🏆 ¡${seleccion[i].nombre} gana con ${seleccion[i].personaje}!`;
-    $('revancha').classList.remove('d-none');
-    $('estado').textContent =
-      'Puedes jugar la revancha o elegir nuevos personajes.';
+    $('estado').textContent = '¡Combate terminado!';
   }
   actualizar();
+  if (respuesta.ganador !== null) {
+    await new Promise((resolve) => { temporizador = setTimeout(resolve, 950); });
+    await Swal.fire({
+      title: '¡Tenemos un ganador!',
+      text: `${seleccion[i].nombre} gana con ${seleccion[i].personaje}.`,
+      icon: 'success',
+      confirmButtonText: 'Volver a la selección',
+      allowOutsideClick: false,
+      allowEscapeKey: false,
+    });
+    volverAlMenu();
+    return;
+  }
   temporizador = setTimeout(() => {
     seleccion.forEach((jugador, indice) => {
       $(`sprite-${indice}`).src = imagen(jugador.personaje);
     });
     bloqueado = false;
     actualizar();
-  }, 500);
+  }, 950);
 });
-$('revancha').addEventListener('click', iniciar);
 $('cambiar').addEventListener('click', async () => {
+  if (bloqueado) return;
   if (combate.ganador === null) {
     const respuesta = await Swal.fire({
       title: '¿Salir del combate?',
@@ -298,22 +330,36 @@ $('cambiar').addEventListener('click', async () => {
     });
     if (!respuesta.isConfirmed) return;
   }
+  volverAlMenu();
+});
+
+function volverAlMenu() {
   clearTimeout(temporizador);
   detenerMusicaDeBatalla();
+  bloqueado = false;
+  combate = null;
+  $('attack-overlay').classList.remove('show');
+  $('attack-overlay').setAttribute('aria-hidden', 'true');
   $('arena').classList.add('d-none');
   $('seleccion').classList.remove('d-none');
   $('estado').textContent = 'Elige tus personajes y pulsa Aceptar.';
   listos.fill(false);
-  seleccion.forEach((_, i) => {
+  seleccion.forEach((jugador, i) => {
+    jugador.nombre = '';
+    jugador.personaje = '';
+    $(`player${i + 1}`).value = '';
+    $(`preview_p${i + 1}`).classList.add('d-none');
     $(`player${i + 1}`).disabled = false;
     $(`btn_player${i + 1}`).disabled = false;
     $(`btn_player${i + 1}`).textContent = 'Aceptar';
     $(`py${i + 1}`)
-      .querySelectorAll('.row img')
+      .querySelectorAll('.row img:not(.character-full-preview)')
       .forEach((img) => {
         img.tabIndex = 0;
+        img.classList.remove('bg-warning');
+        img.setAttribute('aria-pressed', 'false');
         img.removeAttribute('aria-disabled');
       });
   });
   $('player1').focus();
-});
+}

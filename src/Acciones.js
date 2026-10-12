@@ -33,8 +33,12 @@ export default class Acciones extends Personaje {
       config.daño ?? 30,
     );
   }
+  puedeCurarse() {
+    return this.getSemilla() > 0 &&
+      [this.getVida(), this.getKi(), this.getEnergia()].some((valor) => valor < 100);
+  }
   curacion() {
-    if (this.getSemilla() === 0) return false;
+    if (!this.puedeCurarse()) return false;
     this.setVida(100);
     this.setKi(100);
     this.setEnergia(100);

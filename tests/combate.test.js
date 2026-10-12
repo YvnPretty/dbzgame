@@ -91,3 +91,55 @@ test('Gogeta conserva su ataque característico en el combate', () => {
   assert.equal(combate.jugadores[1].getVida(), 70);
   assert.equal(combate.jugadores[0].getKi(), 80);
 });
+
+
+test('no permite dos movimientos consecutivos del mismo jugador', () => {
+  const c = nuevo();
+  c.actuar(0, 'basico');
+  assert.ok(c.actuar(0, 'basico').error);
+  assert.equal(c.turnosTotales, 1);
+  assert.equal(c.jugadores[1].getVida(), 85);
+});
+
+test('semilla con todo lleno no consume semilla ni turno', () => {
+  const c = nuevo();
+  assert.equal(c.jugadores[0].curacion(), false);
+  assert.ok(c.actuar(0, 'curar').error);
+  assert.equal(c.turno, 0);
+  assert.equal(c.turnosTotales, 0);
+  assert.equal(c.jugadores[0].getSemilla(), 2);
+});
+
+for (const stat of ['Vida', 'Ki', 'Energia']) {
+  test(`semilla permitida si únicamente ${stat} está por debajo de 100`, () => {
+    const c = nuevo();
+    c.jugadores[0][`set${stat}`](99);
+    assert.equal(c.actuar(0, 'curar').error, undefined);
+    assert.equal(c.jugadores[0][`get${stat}`](), 100);
+    assert.equal(c.jugadores[0].getSemilla(), 1);
+    assert.equal(c.turno, 1);
+  });
+}
+
+test('especial bloqueado en turnos 1 y 2 y habilitado para ambos desde el 3', () => {
+  const c = nuevo();
+  assert.ok(c.actuar(0, 'especial').error);
+  c.actuar(0, 'defensa');
+  assert.ok(c.actuar(1, 'especial').error);
+  c.actuar(1, 'defensa');
+  assert.equal(c.actuar(0, 'especial').error, undefined);
+  assert.equal(c.actuar(1, 'especial').error, undefined);
+});
+
+test('cada barra se limita a 0–100 y cada jugador tiene dos semillas', () => {
+  const c = nuevo();
+  for (const jugador of c.jugadores) {
+    assert.equal(jugador.getSemilla(), 2);
+    for (const stat of ['Vida', 'Ki', 'Energia']) {
+      jugador[`set${stat}`](150);
+      assert.equal(jugador[`get${stat}`](), 100);
+      jugador[`set${stat}`](-10);
+      assert.equal(jugador[`get${stat}`](), 0);
+    }
+  }
+});

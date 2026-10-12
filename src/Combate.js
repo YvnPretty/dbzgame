@@ -1,7 +1,11 @@
 import Acciones from './Acciones.js';
+import { nombreValido } from './validacion.js';
 
 export default class Combate {
   constructor(seleccion) {
+    if (seleccion.length !== 2 || seleccion.some(({ nombre }) => !nombreValido(nombre))) {
+      throw new Error('Los dos nombres deben contener solo letras y números (1–24 caracteres).');
+    }
     this.jugadores = seleccion.map(
       ({ nombre, personaje }) => new Acciones(nombre, personaje),
     );
@@ -30,6 +34,8 @@ export default class Combate {
     }
     if (accion === 'curar' && jugador.getSemilla() === 0)
       return { error: 'Ya no tienes semillas.' };
+    if (accion === 'curar' && !jugador.puedeCurarse())
+      return { error: 'La semilla requiere al menos una barra menor a 100.' };
     jugador.defendiendo = false;
     let mensaje;
     if (accion === 'basico' || accion === 'especial') {

@@ -27,6 +27,7 @@
         Escribe tu nombre, elige un personaje y pulsa Aceptar.
       </p>
       <section id="seleccion">
+        <p id="nombre-ayuda" class="text-center small">Nombres: solo letras y números, sin espacios (máximo 24).</p>
         <div class="row justify-content-around mt-4">
           <div id="campo_p1" class="col-md-5">
             <div class="form-floating border border-danger rounded mb-3">
@@ -36,6 +37,8 @@
                 class="form-control"
                 placeholder="Jugador 1"
                 maxlength="24"
+                required
+                aria-describedby="nombre-ayuda"
                 autocomplete="off"
               />
               <label class="text-danger" for="player1"
@@ -51,6 +54,8 @@
                 class="form-control"
                 placeholder="Jugador 2"
                 maxlength="24"
+                required
+                aria-describedby="nombre-ayuda"
                 autocomplete="off"
               />
               <label class="text-primary" for="player2"
@@ -186,13 +191,13 @@
           alt="Animación del ataque"
           class="attack-visual"
         />
+        <p id="attack-dialogue" class="attack-dialogue"></p>
       </div>
       <section id="arena" class="d-none" aria-label="Combate">
         <h2 id="turno" class="text-center mb-4" tabindex="-1"></h2>
         <div id="luchadores" class="row g-4"></div>
         <div id="resultado" class="text-center my-4" role="status"></div>
         <div class="d-flex justify-content-center gap-3 my-4 flex-wrap">
-          <button id="revancha" class="btn btn-warning d-none">Revancha</button>
           <button id="cambiar" class="btn btn-outline-light">
             Cambiar personajes
           </button>
