@@ -1,6 +1,7 @@
 node_modules/
+dist/
+*.log
 .env
 .env.*
-!.env.example
-*.log
 .DS_Store
+respaldo*/

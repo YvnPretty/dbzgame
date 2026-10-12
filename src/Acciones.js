@@ -1,32 +1,51 @@
-import Personaje from "./Personaje.js";
+import Personaje from './Personaje.js';
 
-class Acciones extends Personaje{
-    constructor(nombre, pj = ""){
-        super(nombre, pj);
-    }
-    atkBasico(){
-        this.setEnergia(parseInt(this.getEnergia()) - 5);
-        this.setKi(parseInt(this.getKi()) - 10);
-        this.mostrarEstadisticas();
-    }
-    atkEspecial(){
-        this.setEnergia(parseInt(this.getEnergia()) - 15);
-        this.setKi(parseInt(this.getKi()) - 20);
-        this.mostrarEstadisticas();
-    }
-    curacion(){
-        this.setEnergia(100);
-        this.setKi(100);
-        this.setVida(100);
-        this.setSemilla(this.getSemilla() - 1);
-    }
-    cargaEnergia(){
-        this.setEnergia((this.getEnergia() + 15) > 100 ? 100 : (this.getEnergia() + 15));
-        this.setKi((this.getKi() + 10) > 100 ? 100 : (this.getKi() + 10));
-        this.mostrarEstadisticas();
-    }
-    defensa(){
-
-    }
+export default class Acciones extends Personaje {
+  defendiendo = false;
+  puedeAtacar(energia, ki) {
+    return this.getEnergia() >= energia && this.getKi() >= ki;
+  }
+  recibirDanio(cantidad) {
+    const danio = this.defendiendo ? Math.ceil(cantidad / 2) : cantidad;
+    this.setVida(this.getVida() - danio);
+    this.defendiendo = false;
+    return danio;
+  }
+  atacar(rival, energia, ki, danio) {
+    if (!this.puedeAtacar(energia, ki)) return false;
+    this.setEnergia(this.getEnergia() - energia);
+    this.setKi(this.getKi() - ki);
+    return rival.recibirDanio(danio);
+  }
+  atkBasico(rival, config = this.getAtaqueBasico()) {
+    return this.atacar(
+      rival,
+      config.energia ?? 5,
+      config.ki ?? 10,
+      config.daño ?? 15,
+    );
+  }
+  atkEspecial(rival, config = this.getAtaqueEspecial()) {
+    return this.atacar(
+      rival,
+      config.energia ?? 15,
+      config.ki ?? 20,
+      config.daño ?? 30,
+    );
+  }
+  curacion() {
+    if (this.getSemilla() === 0) return false;
+    this.setVida(100);
+    this.setKi(100);
+    this.setEnergia(100);
+    this.setSemilla(this.getSemilla() - 1);
+    return true;
+  }
+  cargaEnergia() {
+    this.setEnergia(this.getEnergia() + 15);
+    this.setKi(this.getKi() + 10);
+  }
+  defensa() {
+    this.defendiendo = true;
+  }
 }
-export default Acciones;

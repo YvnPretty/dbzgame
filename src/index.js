@@ -1,194 +1,319 @@
 import 'bootstrap/dist/css/bootstrap.min.css';
-import 'bootstrap/dist/js/bootstrap.bundle.min.js';
-import '@fortawesome/fontawesome-free/css/all.min.css';
-import Swal from "sweetalert2";
-import Acciones from "./Acciones.js";
+import '@fortawesome/fontawesome-free/css/fontawesome.min.css';
+import '@fortawesome/fontawesome-free/css/solid.min.css';
+import Swal from 'sweetalert2';
+import Combate from './Combate.js';
 import './style.css';
 
-const btn_player1 = document.getElementById("btn_player1");
-const btn_player2 = document.getElementById("btn_player2");
-const player1 = document.getElementById("py1");
-const player2 = document.getElementById("py2");
-const nombre1 = document.getElementById("player1");
-const nombre2 = document.getElementById("player2");
-const campo_player1 = document.getElementById("campo_p1") || nombre1.closest(".col-md-5");
-const campo_player2 = document.getElementById("campo_p2") || nombre2.closest(".col-md-5");
-let pj1 = "", pj2 = "";
-let jugador1, jugador2;
-
-nombre1.addEventListener("input",(event) =>{
-    event.target.value = event.target.value.replace(/[^a-zA-Z0-9]+/,"");
-});
-nombre2.addEventListener("input",(event) =>{
-    event.target.value = event.target.value.replace(/[^a-zA-Z0-9]+/,"");
-});
-
-const remover_seleccion = (color,...elementos) =>{
-    elementos.map((elemento)=>{
-        elemento.classList.remove("bg-warning");
-        elemento.classList.add(color);
-    });
-}
-
-const msj_error = (msj) =>{
-    Swal.fire({
-        title: "Error!",
-        text: msj,
-        icon: "warning",
-        confirmButtonColor: "#dc3545"
-    });
-}
-
-const preview_p1 = document.getElementById("preview_p1");
-const img_preview_p1 = document.getElementById("img_preview_p1");
-const name_preview_p1 = document.getElementById("name_preview_p1");
-
-const preview_p2 = document.getElementById("preview_p2");
-const img_preview_p2 = document.getElementById("img_preview_p2");
-const name_preview_p2 = document.getElementById("name_preview_p2");
-
-const MAPA_PERSONAJES = {
-    "Veguitto": "./public/img/DB/Veguito/base.png",
-    "Veguito": "./public/img/DB/Veguito/base.png",
-    "Trunks": "./public/img/DB/Trunks/base.png",
-    "Gohan": "./public/img/DB/Gohan/base.png",
-    "Goku": "./public/img/DB/Goku/base.png",
-    "Veguetta": "./public/img/DB/Veguetta/base.png",
-    "Vegeta": "./public/img/DB/Veguetta/base.png",
-    "Cell": "./public/img/DB/Cell/base.png",
-    "Pikoro": "./public/img/DB/Pikoro/base.png",
-    "Piccolo": "./public/img/DB/Pikoro/base.png",
-    "Gogeta": "./public/img/DB/Gogueta/base.png",
-    "Gogueta": "./public/img/DB/Gogueta/base.png"
+const $ = (id) => document.getElementById(id);
+const seleccion = [
+  { nombre: '', personaje: '' },
+  { nombre: '', personaje: '' },
+];
+const listos = [false, false];
+const carpetas = {
+  Veguitto: 'Veguito',
+  Trunks: 'Trunks',
+  Gohan: 'Gohan',
+  Goku: 'Goku',
+  Veguetta: 'Veguetta',
+  Cell: 'Cell',
+  Pikoro: 'Pikoro',
+  Gogeta: 'Gogueta',
 };
+const imagen = (personaje, pose = 'base') =>
+  `./public/img/DB/${carpetas[personaje]}/${pose}.png`;
+let combate;
+let bloqueado = false;
+let temporizador;
+let battleMusicTimer = null;
+let battleMusicContext = null;
+const aviso = (text) =>
+  Swal.fire({
+    title: 'Revisa tu jugada',
+    text,
+    icon: 'info',
+    confirmButtonColor: '#b02a37',
+  });
 
-const imagenes_p1 = player1.querySelectorAll(".row img");
-const imagenes_p2 = player2.querySelectorAll(".row img");
-
-for(let i=0; i<imagenes_p1.length; i++){
-    imagenes_p1[i].addEventListener("click",() => {
-        if (jugador1) return;
-        remover_seleccion("bg-danger",...imagenes_p1);
-        imagenes_p1[i].classList.remove("bg-danger");
-        imagenes_p1[i].classList.add("bg-warning");
-        pj1 = imagenes_p1[i].alt;
-        if(img_preview_p1 && preview_p1 && MAPA_PERSONAJES[pj1]){
-            img_preview_p1.src = MAPA_PERSONAJES[pj1];
-            img_preview_p1.alt = pj1;
-            if(name_preview_p1) name_preview_p1.textContent = pj1;
-            preview_p1.classList.remove("d-none");
-        }
-    });
+function iniciarMusicaDeBatalla() {
+  if (battleMusicTimer) return;
+  const AudioCtx = window.AudioContext || window.webkitAudioContext;
+  if (!AudioCtx) return;
+  battleMusicContext = new AudioCtx();
+  const gain = battleMusicContext.createGain();
+  gain.gain.value = 0.03;
+  gain.connect(battleMusicContext.destination);
+  const riff = [
+    220, 247, 293.66, 329.63, 293.66, 247, 196, 220, 174.61, 196, 246.94,
+    293.66,
+  ];
+  let indice = 0;
+  const tocarNota = (frecuencia, inicio, duracion, forma = 'square') => {
+    const oscilador = battleMusicContext.createOscillator();
+    const volumen = battleMusicContext.createGain();
+    oscilador.type = forma;
+    oscilador.frequency.setValueAtTime(
+      frecuencia,
+      battleMusicContext.currentTime + inicio,
+    );
+    volumen.gain.setValueAtTime(
+      0.0001,
+      battleMusicContext.currentTime + inicio,
+    );
+    volumen.gain.linearRampToValueAtTime(
+      0.22,
+      battleMusicContext.currentTime + inicio + 0.02,
+    );
+    volumen.gain.exponentialRampToValueAtTime(
+      0.0001,
+      battleMusicContext.currentTime + inicio + duracion,
+    );
+    oscilador.connect(volumen).connect(gain);
+    oscilador.start(battleMusicContext.currentTime + inicio);
+    oscilador.stop(battleMusicContext.currentTime + inicio + duracion);
+  };
+  const siguientePaso = () => {
+    if (!battleMusicContext) return;
+    const nota = riff[indice % riff.length];
+    tocarNota(nota, 0, 0.22, 'square');
+    if (indice % 2 === 0) tocarNota(nota / 2, 0.04, 0.28, 'sawtooth');
+    indice += 1;
+    battleMusicTimer = setTimeout(siguientePaso, 240);
+  };
+  battleMusicTimer = setTimeout(siguientePaso, 240);
 }
-for(let i=0; i<imagenes_p2.length; i++){
-    imagenes_p2[i].addEventListener("click",() => {
-        if (jugador2) return;
-        remover_seleccion("bg-primary",...imagenes_p2);
-        imagenes_p2[i].classList.remove("bg-primary");
-        imagenes_p2[i].classList.add("bg-warning");
-        pj2 = imagenes_p2[i].alt;
-        if(img_preview_p2 && preview_p2 && MAPA_PERSONAJES[pj2]){
-            img_preview_p2.src = MAPA_PERSONAJES[pj2];
-            img_preview_p2.alt = pj2;
-            if(name_preview_p2) name_preview_p2.textContent = pj2;
-            preview_p2.classList.remove("d-none");
-        }
-    });
+
+function detenerMusicaDeBatalla() {
+  if (battleMusicTimer) {
+    clearTimeout(battleMusicTimer);
+    battleMusicTimer = null;
+  }
+  if (battleMusicContext) {
+    battleMusicContext.close();
+    battleMusicContext = null;
+  }
 }
 
-btn_player1.addEventListener("click",() => {
-    if(nombre1.value == ""){
-        msj_error("El jugador 1 no ah ingresado su NickName");
-    }else if(pj1 == ""){
-        msj_error("El jugador 1 no ah seleccionado un personaje");
-    }else{
-        jugador1 = new Acciones(nombre1.value,pj1);
-        nombre1.disabled = true;
-        if(campo_player1) campo_player1.classList.add("d-none");
-        player1.querySelector(".row").classList.add("d-none");
-        player1.querySelector("p").textContent = nombre1.value;
-        btn_player1.classList.add("d-none");
-        actualizarCombate();
-    }
+function activarAnimacionPoder(indice, accion = 'basico') {
+  const arena = $('arena');
+  const luchador = $(`fighter-${indice}`);
+  const overlay = $('attack-overlay');
+  const visual = $('attack-visual');
+  if (!arena || !luchador || !overlay || !visual) return;
+  const personaje = seleccion[indice]?.personaje;
+  const pose = accion === 'especial' ? 'especial' : 'basico';
+  const src = personaje ? imagen(personaje, pose) : '';
+  visual.src = src;
+  visual.alt = `${personaje ?? 'Personaje'} usando ${accion}`;
+  arena.classList.remove('powering');
+  luchador.classList.remove('powering');
+  overlay.classList.remove('show');
+  void arena.offsetWidth;
+  void luchador.offsetWidth;
+  void overlay.offsetWidth;
+  arena.classList.add('powering');
+  luchador.classList.add('powering');
+  overlay.classList.add('show');
+  setTimeout(() => {
+    arena.classList.remove('powering');
+    luchador.classList.remove('powering');
+    overlay.classList.remove('show');
+  }, 650);
+}
+
+seleccion.forEach((seleccionJugador, i) => {
+  const n = i + 1;
+  $(`py${n}`)
+    .querySelectorAll('.row img')
+    .forEach((img) => {
+      img.tabIndex = 0;
+      img.setAttribute('role', 'button');
+      img.setAttribute('aria-label', `Elegir ${img.alt}, jugador ${n}`);
+      img.setAttribute('aria-pressed', 'false');
+      const elegir = () => {
+        if (listos[i]) return;
+        seleccionJugador.personaje = img.alt;
+        $(`py${n}`)
+          .querySelectorAll('.row img')
+          .forEach((item) => {
+            item.classList.toggle('bg-warning', item === img);
+            item.setAttribute('aria-pressed', String(item === img));
+          });
+        $(`img_preview_p${n}`).src = imagen(img.alt);
+        $(`img_preview_p${n}`).alt = img.alt;
+        $(`name_preview_p${n}`).textContent = img.alt;
+        $(`preview_p${n}`).classList.remove('d-none');
+      };
+      img.addEventListener('click', elegir);
+      img.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          elegir();
+        }
+      });
+    });
+  $(`btn_player${n}`).addEventListener('click', () => {
+    const nombre = $(`player${n}`).value.trim();
+    if (!nombre) return aviso(`Escribe el nombre del jugador ${n}.`);
+    if (!seleccionJugador.personaje)
+      return aviso(`Elige el personaje del jugador ${n}.`);
+    seleccionJugador.nombre = nombre;
+    listos[i] = true;
+    $(`player${n}`).disabled = true;
+    $(`btn_player${n}`).disabled = true;
+    $(`btn_player${n}`).textContent = '¡Listo!';
+    $(`py${n}`)
+      .querySelectorAll('.row img')
+      .forEach((img) => {
+        img.tabIndex = -1;
+        img.setAttribute('aria-disabled', 'true');
+      });
+    $('estado').textContent = `Jugador ${n} listo. Esperando al otro jugador…`;
+    if (listos.every(Boolean)) iniciar();
+  });
 });
 
-btn_player2.addEventListener("click",() => {
-    if(nombre2.value == ""){
-        msj_error("El jugador 2 no ah ingresado su NickName");
-    }else if(pj2 == ""){
-        msj_error("El jugador 2 no ah seleccionado un personaje");
-    }else{
-        jugador2 = new Acciones(nombre2.value,pj2);
-        nombre2.disabled = true;
-        if(campo_player2) campo_player2.classList.add("d-none");
-        player2.querySelector(".row").classList.add("d-none");
-        player2.querySelector("p").textContent = nombre2.value;
-        btn_player2.classList.add("d-none");
-        actualizarCombate();
+function iniciar() {
+  clearTimeout(temporizador);
+  detenerMusicaDeBatalla();
+  combate = new Combate(seleccion);
+  bloqueado = false;
+  $('seleccion').classList.add('d-none');
+  $('arena').classList.remove('d-none');
+  $('estado').textContent = 'Elige una acción cuando sea tu turno.';
+  $('resultado').textContent = '';
+  $('registro').replaceChildren();
+  $('revancha').classList.add('d-none');
+  $('luchadores').innerHTML = seleccion
+    .map((jugador, i) => {
+      const basico = combate.jugadores[i].getAtaqueBasico().nombre;
+      const especial = combate.jugadores[i].getAtaqueEspecial().nombre;
+      return `
+        <div class="col-md-6"><article id="fighter-${i}" class="fighter p-3 p-lg-4">
+            <h3 id="nombre-${i}" class="h4"></h3><p id="personaje-${i}" class="text-secondary"></p>
+            <img id="sprite-${i}" class="battle-sprite" alt="">
+            ${['vida', 'ki', 'energia'].map((stat) => `<div class="stat-label">${{ vida: 'Vida', ki: 'Ki', energia: 'Energía' }[stat]}</div><div class="progress mb-2"><div id="battle-${i}-${stat}" class="progress-bar bg-${{ vida: 'success', ki: 'info', energia: 'warning' }[stat]} text-dark fw-bold" role="progressbar" aria-label="${stat}" aria-valuemin="0" aria-valuemax="100"></div></div>`).join('')}
+            <p id="semillas-${i}" class="mt-3"></p><p id="escudo-${i}" class="shield-status"></p>
+            <div class="actions">
+                <button class="btn btn-outline-light" data-player="${i}" data-action="basico">${basico} <small>15 daño · −5 energía / −10 ki</small></button>
+                <button class="btn btn-warning" data-player="${i}" data-action="especial">${especial} <small>30 daño · −15 energía / −20 ki</small></button>
+                <button class="btn btn-outline-info" data-player="${i}" data-action="defensa">Defender <small>Reduce el daño a la mitad</small></button>
+                <button class="btn btn-outline-warning" data-player="${i}" data-action="energia">Cargar energía <small>+15 energía / +10 ki</small></button>
+                <button class="btn btn-outline-success" data-player="${i}" data-action="curar">Semilla del ermitaño <small>Recupera vida, ki y energía</small></button>
+            </div>
+        </article></div>`;
+    })
+    .join('');
+  seleccion.forEach((jugador, i) => {
+    $(`nombre-${i}`).textContent = `${jugador.nombre} · J${i + 1}`;
+    $(`personaje-${i}`).textContent = jugador.personaje;
+    $(`sprite-${i}`).src = imagen(jugador.personaje);
+    $(`sprite-${i}`).alt = jugador.personaje;
+  });
+  actualizar();
+  $('turno').focus();
+}
+
+function actualizar() {
+  const terminado = combate.ganador !== null;
+  $('turno').textContent = terminado
+    ? '¡Combate terminado!'
+    : `Turno ${combate.ronda}: ${combate.jugadores[combate.turno].nombre} · J${combate.turno + 1}`;
+  combate.jugadores.forEach((jugador, i) => {
+    $(`fighter-${i}`).classList.toggle(
+      'active-turn',
+      !terminado && combate.turno === i,
+    );
+    for (const [stat, value] of Object.entries({
+      vida: jugador.getVida(),
+      ki: jugador.getKi(),
+      energia: jugador.getEnergia(),
+    })) {
+      const barra = $(`battle-${i}-${stat}`);
+      barra.style.width = `${value}%`;
+      barra.textContent = `${value}`;
+      barra.setAttribute('aria-valuenow', value);
     }
-});
-
-// Controles compartidos por ambos jugadores.
-let combateTerminado = false;
-const estado = (n, mensaje) => {
-    document.getElementById(`p${n}-estado`).textContent = mensaje;
-};
-
-function actualizarCombate() {
-    const listos = Boolean(jugador1 && jugador2);
-    [jugador1, jugador2].forEach((jugador, i) => {
-        const n = i + 1;
-        if (jugador) {
-            for (const [stat, valor] of Object.entries({vida: jugador.getVida(), ki: jugador.getKi(), energia: jugador.getEnergia()})) {
-                const barra = document.getElementById(`p${n}-${stat}`);
-                barra.style.width = `${valor}%`;
-                barra.textContent = `${valor}%`;
-                barra.setAttribute("aria-valuenow", valor);
-            }
-            document.getElementById(`p${n}-semillas`).textContent = jugador.getSemilla();
-        }
-        const activo = listos && !combateTerminado;
-        document.getElementById(`p${n}-cargar`).disabled = !activo || (jugador.getKi() === 100 && jugador.getEnergia() === 100);
-        document.getElementById(`p${n}-basico`).disabled = !activo || jugador.getKi() < 10 || jugador.getEnergia() < 5;
-        document.getElementById(`p${n}-especial`).disabled = !activo || jugador.getKi() < 20 || jugador.getEnergia() < 15;
-        document.getElementById(`p${n}-semilla`).disabled = !activo || jugador.getSemilla() === 0 || (jugador.getVida() === 100 && jugador.getKi() === 100 && jugador.getEnergia() === 100);
-        if (!listos && jugador) estado(n, "Listo. Esperando al otro jugador.");
-        else if (listos && !combateTerminado && document.getElementById(`p${n}-estado`).textContent.match(/Esperando|Elige/)) estado(n, "¡Listos para combatir!");
+    $(`semillas-${i}`).textContent =
+      `Semillas disponibles: ${jugador.getSemilla()} / 2`;
+    $(`escudo-${i}`).textContent = jugador.defendiendo
+      ? '🛡 Defensa activa'
+      : '';
+    document.querySelectorAll(`[data-player="${i}"]`).forEach((btn) => {
+      const accion = btn.dataset.action;
+      const falta =
+        (accion === 'basico' && !jugador.puedeAtacar(5, 10)) ||
+        (accion === 'especial' &&
+          (combate.turnosTotales < 2 || !jugador.puedeAtacar(15, 20))) ||
+        (accion === 'curar' && jugador.getSemilla() === 0);
+      btn.disabled = bloqueado || terminado || combate.turno !== i || falta;
     });
+  });
+  if (terminado) detenerMusicaDeBatalla();
+  else if (combate.turnosTotales >= 2) iniciarMusicaDeBatalla();
 }
 
-function ejecutarAccion(n, accion) {
-    if (!jugador1 || !jugador2 || combateTerminado) return;
-    const jugador = n === 1 ? jugador1 : jugador2;
-    const rival = n === 1 ? jugador2 : jugador1;
-    if (document.getElementById(`p${n}-${accion}`).disabled) return;
-    let mensaje;
-    if (accion === "cargar") {
-        jugador.cargaEnergia();
-        mensaje = "Cargaste ki (+10) y energía (+15).";
-    } else if (accion === "semilla") {
-        jugador.curacion();
-        mensaje = "Semilla usada: vida, ki y energía restaurados.";
-    } else {
-        const especial = accion === "especial";
-        if (especial) jugador.atkEspecial(); else jugador.atkBasico();
-        const dano = especial ? 25 : 10;
-        rival.setVida(Math.max(0, rival.getVida() - dano));
-        mensaje = `${especial ? "Ataque especial" : "Ataque básico"}: ${dano} de daño.`;
-        estado(n === 1 ? 2 : 1, `Recibiste ${dano} de daño.`);
-    }
-    estado(n, mensaje);
-    if (rival.getVida() === 0) {
-        combateTerminado = true;
-        estado(n, "¡Ganaste el combate!");
-        estado(n === 1 ? 2 : 1, "Sin vida. Combate terminado.");
-        Swal.fire({title: "¡Victoria!", text: `${jugador.getNombre()} ganó el combate.`, icon: "success"});
-    }
-    actualizarCombate();
-}
-
-for (const n of [1, 2]) {
-    for (const accion of ["cargar", "especial", "basico", "semilla"]) {
-        document.getElementById(`p${n}-${accion}`).addEventListener("click", () => ejecutarAccion(n, accion));
-    }
-}
+$('luchadores').addEventListener('click', (event) => {
+  const btn = event.target.closest('button[data-action]');
+  if (!btn || bloqueado || btn.disabled) return;
+  const i = Number(btn.dataset.player);
+  const accion = btn.dataset.action;
+  const respuesta = combate.actuar(i, accion);
+  if (respuesta.error) return aviso(respuesta.error);
+  const entrada = document.createElement('li');
+  entrada.textContent = respuesta.mensaje;
+  $('registro').prepend(entrada);
+  if ($('registro').children.length > 50)
+    $('registro').lastElementChild.remove();
+  $(`sprite-${i}`).src = imagen(seleccion[i].personaje, 'base');
+  if (accion === 'basico' || accion === 'especial')
+    activarAnimacionPoder(i, accion);
+  bloqueado = true;
+  if (respuesta.ganador !== null) {
+    $('resultado').textContent =
+      `🏆 ¡${seleccion[i].nombre} gana con ${seleccion[i].personaje}!`;
+    $('revancha').classList.remove('d-none');
+    $('estado').textContent =
+      'Puedes jugar la revancha o elegir nuevos personajes.';
+  }
+  actualizar();
+  temporizador = setTimeout(() => {
+    seleccion.forEach((jugador, indice) => {
+      $(`sprite-${indice}`).src = imagen(jugador.personaje);
+    });
+    bloqueado = false;
+    actualizar();
+  }, 500);
+});
+$('revancha').addEventListener('click', iniciar);
+$('cambiar').addEventListener('click', async () => {
+  if (combate.ganador === null) {
+    const respuesta = await Swal.fire({
+      title: '¿Salir del combate?',
+      text: 'Se perderá el progreso de esta partida.',
+      showCancelButton: true,
+      confirmButtonText: 'Cambiar personajes',
+      cancelButtonText: 'Seguir jugando',
+    });
+    if (!respuesta.isConfirmed) return;
+  }
+  clearTimeout(temporizador);
+  detenerMusicaDeBatalla();
+  $('arena').classList.add('d-none');
+  $('seleccion').classList.remove('d-none');
+  $('estado').textContent = 'Elige tus personajes y pulsa Aceptar.';
+  listos.fill(false);
+  seleccion.forEach((_, i) => {
+    $(`player${i + 1}`).disabled = false;
+    $(`btn_player${i + 1}`).disabled = false;
+    $(`btn_player${i + 1}`).textContent = 'Aceptar';
+    $(`py${i + 1}`)
+      .querySelectorAll('.row img')
+      .forEach((img) => {
+        img.tabIndex = 0;
+        img.removeAttribute('aria-disabled');
+      });
+  });
+  $('player1').focus();
+});
